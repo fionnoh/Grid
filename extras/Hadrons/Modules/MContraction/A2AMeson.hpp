@@ -19,8 +19,6 @@ class A2AMesonPar : Serializable
 {
   public:
     GRID_SERIALIZABLE_CLASS_MEMBERS(A2AMesonPar,
-                                    int, Nl,
-                                    int, N,
                                     std::string, A2A1,
                                     std::string, A2A2,
                                     std::string, gammas,
@@ -104,18 +102,23 @@ void TA2AMeson<FImpl>::parseGammaString(std::vector<GammaPair> &gammaList)
 template <typename FImpl>
 void TA2AMeson<FImpl>::setup(void)
 {
-    int nt = env().getDim(Tp);
-    int N = par().N;
-
     int Ls_ = env().getObjectLs(par().A2A1 + "_class");
+    auto &A2AClass1 = envGet(A2ABase, par().A2A1 + "_class");
+    auto &A2AClass2 = envGet(A2ABase, par().A2A2 + "_class");
 
-    envTmp(std::vector<FermionField>, "w1", 1, N, FermionField(env().getGrid(1)));
-    envTmp(std::vector<FermionField>, "v1", 1, N, FermionField(env().getGrid(1)));
-    envTmpLat(FermionField, "tmpv_5d", Ls_);
-    envTmpLat(FermionField, "tmpw_5d", Ls_);
+    int N1 = A2AClass1.nLow + A2AClass1.nHigh;
+    int N2 = A2AClass2.nLow + A2AClass2.nHigh;
+    int nt = env().getDim(Tp);
 
-    envTmp(std::vector<ComplexD>, "MF_x", 1, nt);
-    envTmp(std::vector<ComplexD>, "MF_y", 1, nt);
+    envTmp(std::vector<FermionField>, "w1", 1, N1, FermionField(env().getGrid(1)));
+    envTmp(std::vector<FermionField>, "v1", 1, N2, FermionField(env().getGrid(1)));
+    envTmp(std::vector<FermionField>, "w2", 1, N1, FermionField(env().getGrid(1)));
+    envTmp(std::vector<FermionField>, "v2", 1, N2, FermionField(env().getGrid(1)));
+    envTmpLat(FermionField, "vTmp5D", Ls_);
+    envTmpLat(FermionField, "wTmp5D", Ls_);
+
+    envTmp(std::vector<ComplexD>, "MF1", 1, nt);
+    envTmp(std::vector<ComplexD>, "MF2", 1, nt);
     envTmp(std::vector<ComplexD>, "tmp", 1, nt);
 }
 
@@ -136,53 +139,57 @@ void TA2AMeson<FImpl>::execute(void)
     result.gamma_src = gammaList[0].second;
     result.corr.resize(nt);
 
-    int Nl = par().Nl;
-    int N = par().N;
+    auto &A2AClass1 = envGet(A2ABase, par().A2A1 + "_class");
+    auto &A2AClass2 = envGet(A2ABase, par().A2A2 + "_class");
+    int N = A2AClass1.nLow + A2AClass1.nHigh;
     LOG(Message) << "N for A2A cont: " << N << std::endl;
 
-    envGetTmp(std::vector<ComplexD>, MF_x);
-    envGetTmp(std::vector<ComplexD>, MF_y);
+    envGetTmp(std::vector<ComplexD>, MF1);
+    envGetTmp(std::vector<ComplexD>, MF2);
     envGetTmp(std::vector<ComplexD>, tmp);
 
     for (unsigned int t = 0; t < nt; ++t)
     {
-        tmp[t] = TensorRemove(MF_x[t] * MF_y[t] * 0.0);
+        tmp[t] = TensorRemove(MF1[t] * MF2[t] * 0.0);
     }
 
     Gamma gSnk(gammaList[0].first);
     Gamma gSrc(gammaList[0].second);
 
-    auto &a2a1_fn = envGet(A2ABase, par().A2A1 + "_class");
-
     envGetTmp(std::vector<FermionField>, w1);
     envGetTmp(std::vector<FermionField>, v1);
-    envGetTmp(FermionField, tmpv_5d);
-    envGetTmp(FermionField, tmpw_5d);
+    envGetTmp(std::vector<FermionField>, w2);
+    envGetTmp(std::vector<FermionField>, v2);
+    envGetTmp(FermionField, vTmp5D);
+    envGetTmp(FermionField, wTmp5D);
 
     LOG(Message) << "Finding v and w vectors for N =  " << N << std::endl;
     for (int i = 0; i < N; i++)
     {
-        a2a1_fn.return_v(i, tmpv_5d, v1[i]);
-        a2a1_fn.return_w(i, tmpw_5d, w1[i]);
+        A2AClass1.wReturn(i, wTmp5D, w1[i]);
+        A2AClass1.vReturn(i, vTmp5D, v1[i]);
+        A2AClass2.wReturn(i, wTmp5D, w2[i]);
+        A2AClass2.vReturn(i, vTmp5D, v2[i]);
     }
     LOG(Message) << "Found v and w vectors for N =  " << N << std::endl;
     for (unsigned int i = 0; i < N; i++)
     {
-        v1[i] = gSnk * v1[i];
+        v1[i] = gSrc * v1[i];
+        v2[i] = gSnk * v2[i];
     }
     int ty;
     for (unsigned int i = 0; i < N; i++)
     {
         for (unsigned int j = 0; j < N; j++)
         {
-            mySliceInnerProductVector(MF_x, w1[i], v1[j], Tp);
-            mySliceInnerProductVector(MF_y, w1[j], v1[i], Tp);
+            mySliceInnerProductVector(MF1, w2[i], v1[j], Tp);
+            mySliceInnerProductVector(MF2, w1[j], v2[i], Tp);
             for (unsigned int t = 0; t < nt; ++t)
             {
                 for (unsigned int tx = 0; tx < nt; tx++)
                 {
                     ty = (tx + t) % nt;
-                    tmp[t] += TensorRemove((MF_x[tx]) * (MF_y[ty]));
+                    tmp[t] += TensorRemove((MF1[tx]) * (MF2[ty]));
                 }
             }
         }

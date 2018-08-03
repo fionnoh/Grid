@@ -19,10 +19,9 @@ class A2AVectorsPar: Serializable
 {
 public:
   GRID_SERIALIZABLE_CLASS_MEMBERS(A2AVectorsPar,
-                                  bool, return_5d,
-                                  int, Nl,
-                                  int, N,
-                                  std::vector<std::string>, sources,
+                                  bool, return5D,
+                                  int, nLow,
+                                  std::string, sources,
                                   std::string, action,
                                   std::string, eigenPack,
                                   std::string, solver);
@@ -76,17 +75,10 @@ TA2AVectors<FImpl, nBasis>::TA2AVectors(const std::string name)
 template <typename FImpl, int nBasis>
 std::vector<std::string> TA2AVectors<FImpl, nBasis>::getInput(void)
 {
-    int Nl = par().Nl;
-    std::string sub_string = "";
-    if (Nl > 0) sub_string = "_subtract";
-    std::vector<std::string> in = {par().solver + sub_string};
-
-    int n = par().sources.size();
-
-    for (unsigned int t = 0; t < n; t += 1)
-    {
-        in.push_back(par().sources[t]);
-    }
+    int nLow = par().nLow;
+    std::string subString = "";
+    if (nLow > 0) subString = "_subtract";
+    std::vector<std::string> in = {par().solver + subString, par().sources};
 
     return in;
 }
@@ -118,28 +110,31 @@ std::vector<std::string> TA2AVectors<FImpl, nBasis>::getOutput(void)
 template <typename FImpl, int nBasis>
 void TA2AVectors<FImpl, nBasis>::setup(void)
 {
-    int N = par().N;
-    int Nl = par().Nl;
-    int Nh = N - Nl;
-    bool return_5d = par().return_5d;
+    int nLow = par().nLow;
+    auto &propSrcs = envGet(std::vector<PropagatorField>, par().sources);
+    int nSrc = propSrcs.size();
+    int Nc = FImpl::Dimension;
+
+    // Number of high modes
+    int nHigh = nSrc * Nc * Ns;
+    bool return5D = par().return5D;
     int Ls;
 
-    std::string sub_string = "";
-    if (Nl > 0) sub_string = "_subtract";
-    auto &solver = envGet(Solver, par().solver + sub_string);
-    Ls = env().getObjectLs(par().solver + sub_string);
+    std::string subString = "";
+    if (nLow > 0) subString = "_subtract";
+    auto &solver = envGet(Solver, par().solver + subString);
+    Ls = env().getObjectLs(par().solver + subString);
 
     auto &action = envGet(FMat, par().action);
 
-    envTmpLat(FermionField, "ferm_src", Ls);
-    envTmpLat(FermionField, "unphys_ferm", Ls);
+    envTmpLat(FermionField, "fermSrc", Ls);
+    envTmpLat(FermionField, "unphysFermSrc", Ls);
     envTmpLat(FermionField, "tmp");
-    envTmpLat(FermionField, "tmp2");
 
     std::vector<FermionField> *evec;
     const std::vector<RealD> *eval;
 
-    if (Nl > 0)
+    if (nLow > 0)
     {
         // Low modes
         auto &epack = envGet(EPack, par().eigenPack);
@@ -147,36 +142,36 @@ void TA2AVectors<FImpl, nBasis>::setup(void)
         LOG(Message) << "Creating a2a vectors " << getName() <<
                      " using eigenpack '" << par().eigenPack << "' ("
                      << epack.evec.size() << " modes)" <<
-                     " and " << Nh << " high modes." << std::endl;
+                     " and " << nHigh << " high modes." << std::endl;
         evec = &epack.evec;
         eval = &epack.eval;
     }
     else
     {
         LOG(Message) << "Creating a2a vectors " << getName() <<
-                     " using " << Nh << " high modes only." << std::endl;
+                     " using " << nHigh << " high modes only." << std::endl;
     }
 
     int size_5d = 1;
-    if (return_5d) size_5d = Nh;
+    if (return5D) size_5d = nHigh;
     envCreate(std::vector<FermionField>, getName() + "_w_high_5d", Ls, size_5d, FermionField(env().getGrid(Ls)));
     envCreate(std::vector<FermionField>, getName() + "_v_high_5d", Ls, size_5d, FermionField(env().getGrid(Ls)));
-    envCreate(std::vector<FermionField>, getName() + "_w_high_4d", 1, Nh, FermionField(env().getGrid(1)));
-    envCreate(std::vector<FermionField>, getName() + "_v_high_4d", 1, Nh, FermionField(env().getGrid(1)));
+    envCreate(std::vector<FermionField>, getName() + "_w_high_4d", 1, nHigh, FermionField(env().getGrid(1)));
+    envCreate(std::vector<FermionField>, getName() + "_v_high_4d", 1, nHigh, FermionField(env().getGrid(1)));
 
-    auto &w_high_5d = envGet(std::vector<FermionField>, getName() + "_w_high_5d");
-    auto &v_high_5d = envGet(std::vector<FermionField>, getName() + "_v_high_5d");
-    auto &w_high_4d = envGet(std::vector<FermionField>, getName() + "_w_high_4d");
-    auto &v_high_4d = envGet(std::vector<FermionField>, getName() + "_v_high_4d");
+    auto &wHigh5D = envGet(std::vector<FermionField>, getName() + "_w_high_5d");
+    auto &vHigh5D = envGet(std::vector<FermionField>, getName() + "_v_high_5d");
+    auto &wHigh4D = envGet(std::vector<FermionField>, getName() + "_w_high_4d");
+    auto &vHigh4D = envGet(std::vector<FermionField>, getName() + "_v_high_4d");
 
     envCreate(A2ABase, className_, Ls,
                      evec, eval,
                      action,
                      solver,
-                     w_high_5d, v_high_5d,
-                     w_high_4d, v_high_4d,
-                     Nl, Nh,
-                     return_5d);
+                     wHigh5D, vHigh5D,
+                     wHigh4D, vHigh4D,
+                     nLow, nHigh,
+                     return5D);
 }
 
 // execution ///////////////////////////////////////////////////////////////////
@@ -185,66 +180,65 @@ void TA2AVectors<FImpl, nBasis>::execute(void)
 {
     auto &action = envGet(FMat, par().action);
 
-    int Nt = env().getDim(Tp);
     int Nc = FImpl::Dimension;
     int Ls_;
-    int Nl = par().Nl;
+    int nLow = par().nLow;
 
-    std::string sub_string = "";
-    if (Nl > 0) sub_string = "_subtract";
-    Ls_ = env().getObjectLs(par().solver + sub_string);
+    std::string subString = "";
+    if (nLow > 0) subString = "_subtract";
+    Ls_ = env().getObjectLs(par().solver + subString);
 
-    auto &a2areturn = envGet(A2ABase, className_);
+    auto &A2AClass = envGet(A2ABase, className_);
 
     // High modes
-    auto sources = par().sources;
-    int Nsrc = par().sources.size();
+    std::string sources = par().sources;
+    auto &propSrcs = envGet(std::vector<PropagatorField>, sources);
+    int nSrc = propSrcs.size();
 
-    envGetTmp(FermionField, ferm_src);
-    envGetTmp(FermionField, unphys_ferm);
+    envGetTmp(FermionField, fermSrc);
+    envGetTmp(FermionField, unphysFermSrc);
     envGetTmp(FermionField, tmp);
-    envGetTmp(FermionField, tmp2);
 
-    int N_count = 0;
+    int nCount = 0;
     for (unsigned int s = 0; s < Ns; ++s)
         for (unsigned int c = 0; c < Nc; ++c)
-        for (unsigned int T = 0; T < Nsrc; T++)
-        {
-            auto &prop_src = envGet(PropagatorField, sources[T]);
-            LOG(Message) << "A2A src for s = " << s << " , c = " << c << ", T = " << T << std::endl;
-            // source conversion for 4D sources
-            if (!env().isObject5d(sources[T]))
+            for (unsigned int h = 0; h < nSrc; ++h)
             {
-                if (Ls_ == 1)
+                LOG(Message) << "A2A src for s = " << s << " , c = " << c << ", h = " << h << std::endl;
+                // source conversion for 4D sources
+                if (!env().isObject5d(sources))
                 {
-                    PropToFerm<FImpl>(ferm_src, prop_src, s, c);
-                    tmp = ferm_src;
+                    if (Ls_ == 1)
+                    {
+                        PropToFerm<FImpl>(fermSrc, propSrcs[h], s, c);
+                        tmp = fermSrc;
+                    }
+                    else
+                    {
+                        PropToFerm<FImpl>(tmp, propSrcs[h], s, c);
+                        LOG(Message) << "ferm_tmp = " << tmp << std::endl;
+                        action.ImportPhysicalFermionSource(tmp, fermSrc);
+                        action.ImportUnphysicalFermion(tmp, unphysFermSrc);
+                    }
                 }
+                // source conversion for 5D sources
                 else
                 {
-                    PropToFerm<FImpl>(tmp, prop_src, s, c);
-                    action.ImportPhysicalFermionSource(tmp, ferm_src);
-                    action.ImportUnphysicalFermion(tmp, unphys_ferm);
+                    if (Ls_ != env().getObjectLs(sources))
+                    {
+                        HADRONS_ERROR(Size, "Ls mismatch between quark action and source");
+                    }
+                    else
+                    {
+                        PropToFerm<FImpl>(fermSrc, propSrcs[h], s, c);
+                        action.ExportPhysicalFermionSolution(fermSrc, tmp);
+                        unphysFermSrc = fermSrc;
+                    }
                 }
+                LOG(Message) << "A2AClass.highModes Ncount = " << nCount << std::endl;
+                A2AClass.highModes(fermSrc, unphysFermSrc, tmp, nCount);
+                nCount++;
             }
-            // source conversion for 5D sources
-            else
-            {
-                if (Ls_ != env().getObjectLs(sources[T]))
-                {
-                    HADRONS_ERROR(Size, "Ls mismatch between quark action and source");
-                }
-                else
-                {
-                    PropToFerm<FImpl>(ferm_src, prop_src, s, c);
-                    action.ExportPhysicalFermionSolution(ferm_src, tmp);
-                    unphys_ferm = ferm_src;
-                }
-            }
-            LOG(Message) << "a2areturn.high_modes Ncount = " << N_count << std::endl;
-            a2areturn.high_modes(ferm_src, unphys_ferm, tmp, N_count);
-            N_count++;
-        }
 }
 END_MODULE_NAMESPACE
 

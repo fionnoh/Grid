@@ -19,160 +19,161 @@ class A2AModesSchurDiagTwo
     const std::vector<RealD> *eval;
     Matrix &action;
     Solver &solver;
-    std::vector<Field> w_high_5d, v_high_5d, w_high_4d, v_high_4d;
-    const int Nl, Nh;
-    const bool return_5d;
+    std::vector<Field> wHigh5D, vHigh5D, wHigh4D, vHigh4D;
+    const bool return5D;
+  public:
+    const int nLow, nHigh;
 
   public:
     A2AModesSchurDiagTwo(const std::vector<Field> *_evec, const std::vector<RealD> *_eval,
                          Matrix &_action,
                          Solver &_solver,
-                         std::vector<Field> _w_high_5d, std::vector<Field> _v_high_5d,
-                         std::vector<Field> _w_high_4d, std::vector<Field> _v_high_4d,
-                         const int _Nl, const int _Nh,
-                         const bool _return_5d)
+                         std::vector<Field> _wHigh5D, std::vector<Field> _vHigh5D,
+                         std::vector<Field> _wHigh4D, std::vector<Field> _vHigh4D,
+                         const int _nLow, const int _nHigh,
+                         const bool _return5D)
                         : evec(_evec), eval(_eval),
                         action(_action),
                         solver(_solver),
-                        w_high_5d(_w_high_5d), v_high_5d(_v_high_5d),
-                        w_high_4d(_w_high_4d), v_high_4d(_v_high_4d),
-                        Nl(_Nl), Nh(_Nh),
-                        return_5d(_return_5d){};
+                        wHigh5D(_wHigh5D), vHigh5D(_vHigh5D),
+                        wHigh4D(_wHigh4D), vHigh4D(_vHigh4D),
+                        nLow(_nLow), nHigh(_nHigh),
+                        return5D(_return5D){};
 
-    void high_modes(Field &source_5d, Field &w_source_5d, Field &source_4d, int i)
+    void highModes(Field &source5D, Field &wSource5D, Field &source4D, int i)
     {
-        int i5d;
+        int i5D;
         LOG(Message) << "A2A high modes for i = " << i << std::endl;
-        i5d = 0;
-        if (return_5d) i5d = i;
-        this->high_mode_v(action, solver, source_5d, v_high_5d[i5d], v_high_4d[i]);
-        this->high_mode_w(w_source_5d, source_4d, w_high_5d[i5d], w_high_4d[i]);
+        i5D = 0;
+        if (return5D) i5D = i;
+        this->vHighMode(action, solver, source5D, vHigh5D[i5D], vHigh4D[i]);
+        this->wHighMode(wSource5D, source4D, wHigh5D[i5D], wHigh4D[i]);
     }
 
-    void return_v(int i, Field &vout_5d, Field &vout_4d)
+    void vReturn(int i, Field &vOut5D, Field &vOut4D)
     {
-        if (i < Nl)
+        if (i < nLow)
         {
-            this->low_mode_v(action, evec->at(i), eval->at(i), vout_5d, vout_4d);
+            this->vLowMode(action, evec->at(i), eval->at(i), vOut5D, vOut4D);
         }
         else
         {
-            vout_4d = v_high_4d[i - Nl];
-            if (!(return_5d)) i = Nl;
-            vout_5d = v_high_5d[i - Nl];
+            vOut4D = vHigh4D[i - nLow];
+            if (!(return5D)) i = nLow;
+            vOut5D = vHigh5D[i - nLow];
         }
     }
-    void return_w(int i, Field &wout_5d, Field &wout_4d)
+    void wReturn(int i, Field &wOut5D, Field &wOut4D)
     {
-        if (i < Nl)
+        if (i < nLow)
         {
-            this->low_mode_w(action, evec->at(i), eval->at(i), wout_5d, wout_4d);
+            this->wLowMode(action, evec->at(i), eval->at(i), wOut5D, wOut4D);
         }
         else
         {
-            wout_4d = w_high_4d[i - Nl];
-            if (!(return_5d)) i = Nl;
-            wout_5d = w_high_5d[i - Nl];
+            wOut4D = wHigh4D[i - nLow];
+            if (!(return5D)) i = nLow;
+            wOut5D = wHigh5D[i - nLow];
         }
     }
 
-    void low_mode_v(Matrix &action, const Field &evec, const RealD &eval, Field &vout_5d, Field &vout_4d)
+    void vLowMode(Matrix &action, const Field &evec, const RealD &eval, Field &vOut5D, Field &vOut4D)
     {
         GridBase *grid = action.RedBlackGrid();
-        Field src_o(grid);
-        Field sol_e(grid);
-        Field sol_o(grid);
+        Field srcO(grid);
+        Field solE(grid);
+        Field solO(grid);
         Field tmp(grid);
 
-        src_o = evec;
-        src_o.checkerboard = Odd;
-        pickCheckerboard(Even, sol_e, vout_5d);
-        pickCheckerboard(Odd, sol_o, vout_5d);
+        srcO = evec;
+        srcO.checkerboard = Odd;
+        pickCheckerboard(Even, solE, vOut5D);
+        pickCheckerboard(Odd, solO, vOut5D);
 
         /////////////////////////////////////////////////////
         // v_ie = -(1/eval_i) * MeeInv Meo MooInv evec_i
         /////////////////////////////////////////////////////
-        action.MooeeInv(src_o, tmp);
+        action.MooeeInv(srcO, tmp);
         assert(tmp.checkerboard == Odd);
-        action.Meooe(tmp, sol_e);
-        assert(sol_e.checkerboard == Even);
-        action.MooeeInv(sol_e, tmp);
+        action.Meooe(tmp, solE);
+        assert(solE.checkerboard == Even);
+        action.MooeeInv(solE, tmp);
         assert(tmp.checkerboard == Even);
-        sol_e = (-1.0 / eval) * tmp;
-        assert(sol_e.checkerboard == Even);
+        solE = (-1.0 / eval) * tmp;
+        assert(solE.checkerboard == Even);
 
         /////////////////////////////////////////////////////
         // v_io = (1/eval_i) * MooInv evec_i
         /////////////////////////////////////////////////////
-        action.MooeeInv(src_o, tmp);
+        action.MooeeInv(srcO, tmp);
         assert(tmp.checkerboard == Odd);
-        sol_o = (1.0 / eval) * tmp;
-        assert(sol_o.checkerboard == Odd);
+        solO = (1.0 / eval) * tmp;
+        assert(solO.checkerboard == Odd);
 
-        setCheckerboard(vout_5d, sol_e);
-        assert(sol_e.checkerboard == Even);
-        setCheckerboard(vout_5d, sol_o);
-        assert(sol_o.checkerboard == Odd);
+        setCheckerboard(vOut5D, solE);
+        assert(solE.checkerboard == Even);
+        setCheckerboard(vOut5D, solO);
+        assert(solO.checkerboard == Odd);
 
-        action.ExportPhysicalFermionSolution(vout_5d, vout_4d);
+        action.ExportPhysicalFermionSolution(vOut5D, vOut4D);
     }
 
-    void low_mode_w(Matrix &action, const Field &evec, const RealD &eval, Field &wout_5d, Field &wout_4d)
+    void wLowMode(Matrix &action, const Field &evec, const RealD &eval, Field &wOut5D, Field &wOut4D)
     {
         GridBase *grid = action.RedBlackGrid();
         SchurDiagTwoOperator<Matrix, Field> _HermOpEO(action);
 
-        Field src_o(grid);
-        Field sol_e(grid);
-        Field sol_o(grid);
+        Field srcO(grid);
+        Field solE(grid);
+        Field solO(grid);
         Field tmp(grid);
 
         GridBase *fgrid = action.Grid();
         Field tmp_wout(fgrid);
 
-        src_o = evec;
-        src_o.checkerboard = Odd;
-        pickCheckerboard(Even, sol_e, tmp_wout);
-        pickCheckerboard(Odd, sol_o, tmp_wout);
+        srcO = evec;
+        srcO.checkerboard = Odd;
+        pickCheckerboard(Even, solE, tmp_wout);
+        pickCheckerboard(Odd, solO, tmp_wout);
 
         /////////////////////////////////////////////////////
         // w_ie = - MeeInvDag MoeDag Doo evec_i
         /////////////////////////////////////////////////////
-        _HermOpEO.Mpc(src_o, tmp);
+        _HermOpEO.Mpc(srcO, tmp);
         assert(tmp.checkerboard == Odd);
-        action.MeooeDag(tmp, sol_e);
-        assert(sol_e.checkerboard == Even);
-        action.MooeeInvDag(sol_e, tmp);
+        action.MeooeDag(tmp, solE);
+        assert(solE.checkerboard == Even);
+        action.MooeeInvDag(solE, tmp);
         assert(tmp.checkerboard == Even);
-        sol_e = (-1.0) * tmp;
+        solE = (-1.0) * tmp;
 
         /////////////////////////////////////////////////////
         // w_io = Doo evec_i
         /////////////////////////////////////////////////////
-        _HermOpEO.Mpc(src_o, sol_o);
-        assert(sol_o.checkerboard == Odd);
+        _HermOpEO.Mpc(srcO, solO);
+        assert(solO.checkerboard == Odd);
 
-        setCheckerboard(tmp_wout, sol_e);
-        assert(sol_e.checkerboard == Even);
-        setCheckerboard(tmp_wout, sol_o);
-        assert(sol_o.checkerboard == Odd);
+        setCheckerboard(tmp_wout, solE);
+        assert(solE.checkerboard == Even);
+        setCheckerboard(tmp_wout, solO);
+        assert(solO.checkerboard == Odd);
 
-        action.DminusDag(tmp_wout, wout_5d);
+        action.DminusDag(tmp_wout, wOut5D);
 
-        action.ExportPhysicalFermionSource(wout_5d, wout_4d);
+        action.ExportPhysicalFermionSource(wOut5D, wOut4D);
     }
 
-    void high_mode_v(Matrix &action, Solver &solver, const Field &source, Field &vout_5d, Field &vout_4d)
+    void vHighMode(Matrix &action, Solver &solver, const Field &source, Field &vOut5D, Field &vOut4D)
     {
         GridBase *fgrid = action.Grid();
-        solver(vout_5d, source); // Note: solver is solver(out, in)
-        action.ExportPhysicalFermionSolution(vout_5d, vout_4d);
+        solver(vOut5D, source); // Note: solver is solver(out, in)
+        action.ExportPhysicalFermionSolution(vOut5D, vOut4D);
     }
 
-    void high_mode_w(const Field &w_source_5d, const Field &source_4d, Field &wout_5d, Field &wout_4d)
+    void wHighMode(const Field &wSource5D, const Field &source4D, Field &wOut5D, Field &wOut4D)
     {
-        wout_5d = w_source_5d;
-        wout_4d = source_4d;
+        wOut5D = wSource5D;
+        wOut4D = source4D;
     }
 };
 
@@ -195,8 +196,8 @@ class A2AModesSchurDiagTwo
 //     {
 //         FineField prom_evec(subspace[0]._grid);
 //         blockPromote(evec_coarse[i], prom_evec, subspace);
-//         this->low_mode_v(action, prom_evec, eval_coarse[i], vout);
-//         this->low_mode_w(action, prom_evec, eval_coarse[i], wout);
+//         this->vLowMode(action, prom_evec, eval_coarse[i], vout);
+//         this->wLowMode(action, prom_evec, eval_coarse[i], wout);
 //     }
 // };
 

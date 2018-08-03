@@ -1,3 +1,4 @@
+#include <Grid/Hadrons/Modules/MSource/Diluted.hpp>
 #include <Grid/Hadrons/Modules/MSource/SeqConserved.hpp>
 #include <Grid/Hadrons/Modules/MSource/SeqGamma.hpp>
 #include <Grid/Hadrons/Modules/MSource/Z2.hpp>

@@ -4,6 +4,7 @@ modules_cc =\
   Modules/MSource/Point.cc \
   Modules/MSource/Z2.cc \
   Modules/MSource/Wall.cc \
+  Modules/MSource/Diluted.cc \
   Modules/MSink/Point.cc \
   Modules/MSink/Smear.cc \
   Modules/MIO/LoadNersc.cc \
@@ -58,6 +59,7 @@ modules_cc =\
   Modules/MGauge/StoutSmearing.cc
 
 modules_hpp =\
+  Modules/MSource/Diluted.hpp \
   Modules/MSource/SeqConserved.hpp \
   Modules/MSource/SeqGamma.hpp \
   Modules/MSource/Z2.hpp \
