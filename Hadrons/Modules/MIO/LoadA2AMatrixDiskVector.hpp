@@ -80,7 +80,7 @@ void TLoadA2AMatrixDiskVector<FImpl>::setup(void)
     std::string dataset = par().dataset;
     std::string dvFile = dvDir + "/" + getName() + "." + std::to_string(vm().getTrajectory());
 
-    int nt = env().getDim(Tp);
+    int nt = env().getDim().back();
     int cacheSize = par().cacheSize;
     bool clean = true;
     GridBase *grid = envGetGrid(FermionField);
@@ -92,7 +92,7 @@ void TLoadA2AMatrixDiskVector<FImpl>::setup(void)
 template <typename FImpl>
 void TLoadA2AMatrixDiskVector<FImpl>::execute(void)
 {
-    int nt = env().getDim(Tp);
+    int nt = env().getDim().back();
     std::string file  = par().file;
     std::string dataset  = par().dataset;
     GridBase *grid = envGetGrid(FermionField);
