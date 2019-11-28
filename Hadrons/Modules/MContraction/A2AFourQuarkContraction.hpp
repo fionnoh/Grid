@@ -76,9 +76,9 @@ std::vector<std::string> TA2AFourQuarkContraction<FImpl>::getOutput(void)
 template <typename FImpl>
 void TA2AFourQuarkContraction<FImpl>::setup(void)
 {
+    nt_ = env().getDim(Tp);
     if (par().allContr)
     {
-        nt_ = env().getDim(Tp);
         envTmp(std::vector<PropagatorField>, "tmpWWVV", 1, nt_, envGetGrid(PropagatorField));
         envCreate(std::vector<PropagatorField>, getName(), 1, nt_, envGetGrid(PropagatorField));
     }
@@ -106,12 +106,12 @@ void TA2AFourQuarkContraction<FImpl>::execute(void)
     {
         LOG(Message) << "Computing 4 quark contraction for " << getName()
                      << " for all t0 time translations "
-                     << "with nt = " << nt_ << " and dt = " << dt << std::endl;
+                     << "with nt = " << nt << " and dt = " << dt << std::endl;
 
         auto &WWVV = envGet(std::vector<PropagatorField>, getName());
         A2Autils<FImpl>::ContractWWVV(tmpWWVV, mf12, &v1[0], &v2[0]);
-        for(unsigned int t = 0; t < nt_; t++){
-            unsigned int t0 = (t + dt) % nt_;
+        for(unsigned int t = 0; t < nt; t++){
+            unsigned int t0 = (t + dt) % nt;
             WWVV[t] = tmpWWVV[t0];
         }
     }
