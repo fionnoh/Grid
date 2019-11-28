@@ -34,6 +34,7 @@ See the full license in the file "LICENSE" in the top level distribution directo
 #include <Hadrons/Module.hpp>
 #include <Hadrons/ModuleFactory.hpp>
 #include <Hadrons/A2AMatrix.hpp>
+#include <Hadrons/DiskVector.hpp>
 
 BEGIN_HADRONS_NAMESPACE
 
@@ -41,6 +42,18 @@ BEGIN_HADRONS_NAMESPACE
  *                     All-to-all meson field creation                        *
  ******************************************************************************/
 BEGIN_MODULE_NAMESPACE(MContraction)
+
+class A2AMesonFieldLiveOutput: Serializable
+{
+public:
+    GRID_SERIALIZABLE_CLASS_MEMBERS(A2AMesonFieldLiveOutput,
+                                    bool, enable,
+                                    std::string, name,
+                                    std::string, file,
+                                    std::string, dataset,
+                                    std::string, diskVectorDir,
+                                    unsigned int, cacheSize);
+};
 
 class A2AMesonFieldPar: Serializable
 {
@@ -52,7 +65,8 @@ public:
                                     std::string, right,
                                     std::string, output,
                                     std::string, gammas,
-                                    std::vector<std::string>, mom);
+                                    std::vector<std::string>, mom,
+                                    std::vector<A2AMesonFieldLiveOutput>, liveOutput);
 };
 
 class A2AMesonFieldMetadata: Serializable
@@ -162,6 +176,17 @@ std::vector<std::string> TA2AMesonField<FImpl>::getOutput(void)
 {
     std::vector<std::string> out = {};
 
+    if (!par().liveOutput.empty())
+    {
+        for (auto &p: par().liveOutput)
+        {
+            if (p.enable)
+            {
+                out.push_back(p.name);
+            }
+        }
+    }
+
     return out;
 }
 
@@ -214,6 +239,26 @@ void TA2AMesonField<FImpl>::setup(void)
     envTmp(Computation, "computation", 1, envGetGrid(FermionField), 
            env().getNd() - 1, mom_.size(), gamma_.size(), par().block, 
            par().cacheBlock, this);
+
+    if (!par().liveOutput.empty())
+    {
+        for (auto &p: par().liveOutput)
+        {
+            if (p.enable)
+            {
+                std::string dvDir = p.diskVectorDir;
+                std::string dataset = p.dataset;
+                std::string dvFile = dvDir + "/" + p.name + "." + std::to_string(vm().getTrajectory());
+
+                int Ls = 1;
+                int nt = env().getDim().back();
+                int cacheSize = p.cacheSize;
+                bool clean = true;
+                GridBase *grid = envGetGrid(FermionField);
+                envCreate(EigenDiskVector<ComplexD>, p.name, Ls, dvFile, nt, cacheSize, clean, grid);
+            }
+        }
+    }
 }
 
 // execution ///////////////////////////////////////////////////////////////////
@@ -306,6 +351,31 @@ void TA2AMesonField<FImpl>::execute(void)
 
     envGetTmp(Computation, computation);
     computation.execute(left, right, kernel, ionameFn, filenameFn, metadataFn);
+    
+    if (!par().liveOutput.empty())
+    {
+        for (auto &p: par().liveOutput)
+        {
+            if (p.enable)
+            {
+                std::string file  = p.file;
+                std::string dataset  = p.dataset;
+                GridBase *grid = envGetGrid(FermionField);
+
+                auto &mesonFieldDV = envGet(EigenDiskVector<ComplexD>, p.name);
+
+                int traj = vm().getTrajectory();
+                tokenReplace(file, "traj", traj);
+                LOG(Message) << "-- Loading '" << file << "'-- " << std::endl;
+                double t;
+                A2AMatrixIo<HADRONS_A2AM_IO_TYPE> mfIO(file, dataset, nt);
+                mfIO.load(mesonFieldDV, &t, grid);
+                LOG(Message) << "Read " << mfIO.getSize() << " bytes in " << t 
+                             << " usec, " << mfIO.getSize() / t * 1.0e6 / 1024 / 1024 
+                             << " MB/s" << std::endl;
+            }
+        }
+    }
 }
 
 END_MODULE_NAMESPACE
