@@ -110,6 +110,22 @@ private:
     unsigned int nSparse_;
 };
 
+template <typename FImpl>
+class SparseGridSpinColorDiagonalNoise: public DilutedNoise<FImpl>
+{
+public:
+    typedef typename FImpl::FermionField FermionField;
+public:
+    // constructor/destructor
+    SparseGridSpinColorDiagonalNoise(GridCartesian *g, unsigned int n_src, unsigned int n_sparse);
+    virtual ~SparseGridSpinColorDiagonalNoise(void) = default;
+    // generate noise
+    virtual void generateNoise(GridParallelRNG &rng);
+private:
+    unsigned int nSrc_;
+    unsigned int nSparse_;
+};
+
 /******************************************************************************
  *                    DilutedNoise template implementation                    *
  ******************************************************************************/
@@ -349,6 +365,71 @@ void SparseSpinColorDiagonalNoise<FImpl>::generateNoise(GridParallelRNG &rng)
     }
     Real norm = sqrt(1./nSrc_ec);
     this->normalise(norm);
+}
+
+/******************************************************************************
+ *        SparseGridSpinColorDiagonalNoise template implementation           *
+ ******************************************************************************/
+template <typename FImpl>
+SparseGridSpinColorDiagonalNoise<FImpl>::
+SparseGridSpinColorDiagonalNoise(GridCartesian *g, unsigned int nSrc, unsigned int nSparse)
+: DilutedNoise<FImpl>(g, pow(nSparse,g->GlobalDimensions().size())*nSrc*Ns*FImpl::Dimension),
+                      nSrc_(nSrc), nSparse_(nSparse)
+{}
+
+template <typename FImpl>
+void SparseGridSpinColorDiagonalNoise<FImpl>::generateNoise(GridParallelRNG &rng)
+{
+    typedef decltype(peekColour((*this)[0], 0)) SpinField;
+
+    auto                       &noise = *this;
+    auto                       g      = this->getGrid();
+    auto                       nd     = g->GlobalDimensions().size();
+    auto                       nc     = FImpl::Dimension;
+    LatticeInteger             coor(g), coorTot(g); coorTot = 0.;
+    Complex                    shift(1., 1.);
+    LatticeComplex             eta(g), etaSparse(g), etaShift(g);
+    SpinField                  etas(g);
+    unsigned int               i = 0;
+    unsigned int               j = 0;
+    unsigned int               nSrc_ec;
+    
+    for (unsigned int n = 0; n < nSrc_; ++n)
+    {
+        bernoulli(rng, eta);
+        eta = (2.*eta - shift)*(1./::sqrt(2.));
+
+        for(unsigned int d = 0; d < nd; ++d) 
+        {
+            LatticeCoordinate(coor, d);
+            eta = where(mod(coor,nSparse_), 0.*eta, eta);
+        }
+
+        for (int d0 = 0; d0 < nSparse_; ++d0)
+        for (int d1 = 0; d1 < nSparse_; ++d1)
+        for (int d2 = 0; d2 < nSparse_; ++d2)
+        for (int d3 = 0; d3 < nSparse_; ++d3)
+        {
+            etaShift = Cshift(eta, 0, d0);
+            etaShift = Cshift(etaShift, 1, d1);
+            etaShift = Cshift(etaShift, 2, d2);
+            etaShift = Cshift(etaShift, 3, d3);
+
+            for (unsigned int s = 0; s < Ns; ++s)
+            {
+                etas = Zero();
+                pokeSpin(etas, etaShift, s);
+                for (unsigned int c = 0; c < nc; ++c)
+                {
+                    noise[i] = Zero();
+                    pokeColour(noise[i], etas, c);
+                    
+                    i++;                    
+                    /**/ 
+                }
+            }
+        }
+    }
 }
 
 END_HADRONS_NAMESPACE

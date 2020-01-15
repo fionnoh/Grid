@@ -45,6 +45,7 @@
 #include <Hadrons/Modules/MIO/LoadNersc.hpp>
 #include <Hadrons/Modules/MIO/LoadPerambulator.hpp>
 #include <Hadrons/Modules/MNoise/FullVolumeSpinColorDiagonal.hpp>
+#include <Hadrons/Modules/MNoise/SparseGridSpinColorDiagonal.hpp>
 #include <Hadrons/Modules/MNoise/SparseSpinColorDiagonal.hpp>
 #include <Hadrons/Modules/MNoise/TimeDilutedSpinColorDiagonal.hpp>
 #include <Hadrons/Modules/MNPR/Amputate.hpp>
