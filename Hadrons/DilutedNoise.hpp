@@ -95,14 +95,14 @@ private:
 };
 
 template <typename FImpl>
-class SparseSpinColorDiagonalNoise: public DilutedNoise<FImpl>
+class CheckerboardSpinColorDiagonalNoise: public DilutedNoise<FImpl>
 {
 public:
     typedef typename FImpl::FermionField FermionField;
 public:
     // constructor/destructor
-    SparseSpinColorDiagonalNoise(GridCartesian *g, unsigned int n_src, unsigned int n_sparse);
-    virtual ~SparseSpinColorDiagonalNoise(void) = default;
+    CheckerboardSpinColorDiagonalNoise(GridCartesian *g, unsigned int n_src, unsigned int n_sparse);
+    virtual ~CheckerboardSpinColorDiagonalNoise(void) = default;
     // generate noise
     virtual void generateNoise(GridParallelRNG &rng);
 private:
@@ -111,14 +111,14 @@ private:
 };
 
 template <typename FImpl>
-class SparseGridSpinColorDiagonalNoise: public DilutedNoise<FImpl>
+class SparseSpinColorDiagonalNoise: public DilutedNoise<FImpl>
 {
 public:
     typedef typename FImpl::FermionField FermionField;
 public:
     // constructor/destructor
-    SparseGridSpinColorDiagonalNoise(GridCartesian *g, unsigned int n_src, unsigned int n_sparse);
-    virtual ~SparseGridSpinColorDiagonalNoise(void) = default;
+    SparseSpinColorDiagonalNoise(GridCartesian *g, unsigned int n_src, unsigned int n_sparse);
+    virtual ~SparseSpinColorDiagonalNoise(void) = default;
     // generate noise
     virtual void generateNoise(GridParallelRNG &rng);
 private:
@@ -287,16 +287,16 @@ void FullVolumeSpinColorDiagonalNoise<FImpl>::generateNoise(GridParallelRNG &rng
 }
 
 /******************************************************************************
- *        SparseSpinColorDiagonalNoise template implementation           *
+ *        CheckerboardSpinColorDiagonalNoise template implementation           *
  ******************************************************************************/
 template <typename FImpl>
-SparseSpinColorDiagonalNoise<FImpl>::
-SparseSpinColorDiagonalNoise(GridCartesian *g, unsigned int nSrc, unsigned int nSparse)
+CheckerboardSpinColorDiagonalNoise<FImpl>::
+CheckerboardSpinColorDiagonalNoise(GridCartesian *g, unsigned int nSrc, unsigned int nSparse)
 : DilutedNoise<FImpl>(g, nSrc*Ns*FImpl::Dimension), nSrc_(nSrc), nSparse_(nSparse)
 {}
 
 template <typename FImpl>
-void SparseSpinColorDiagonalNoise<FImpl>::generateNoise(GridParallelRNG &rng)
+void CheckerboardSpinColorDiagonalNoise<FImpl>::generateNoise(GridParallelRNG &rng)
 {
     typedef decltype(peekColour((*this)[0], 0)) SpinField;
 
@@ -368,17 +368,17 @@ void SparseSpinColorDiagonalNoise<FImpl>::generateNoise(GridParallelRNG &rng)
 }
 
 /******************************************************************************
- *        SparseGridSpinColorDiagonalNoise template implementation           *
+ *        SparseSpinColorDiagonalNoise template implementation           *
  ******************************************************************************/
 template <typename FImpl>
-SparseGridSpinColorDiagonalNoise<FImpl>::
-SparseGridSpinColorDiagonalNoise(GridCartesian *g, unsigned int nSrc, unsigned int nSparse)
+SparseSpinColorDiagonalNoise<FImpl>::
+SparseSpinColorDiagonalNoise(GridCartesian *g, unsigned int nSrc, unsigned int nSparse)
 : DilutedNoise<FImpl>(g, pow(nSparse,g->GlobalDimensions().size())*nSrc*Ns*FImpl::Dimension),
                       nSrc_(nSrc), nSparse_(nSparse)
 {}
 
 template <typename FImpl>
-void SparseGridSpinColorDiagonalNoise<FImpl>::generateNoise(GridParallelRNG &rng)
+void SparseSpinColorDiagonalNoise<FImpl>::generateNoise(GridParallelRNG &rng)
 {
     typedef decltype(peekColour((*this)[0], 0)) SpinField;
 
@@ -424,8 +424,7 @@ void SparseGridSpinColorDiagonalNoise<FImpl>::generateNoise(GridParallelRNG &rng
                     noise[i] = Zero();
                     pokeColour(noise[i], etas, c);
                     
-                    i++;                    
-                    /**/ 
+                    i++;
                 }
             }
         }

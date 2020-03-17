@@ -44,8 +44,8 @@ modules_cc =\
   Modules/MIO/LoadEigenPack.cc \
   Modules/MIO/LoadNersc.cc \
   Modules/MIO/LoadPerambulator.cc \
+  Modules/MNoise/CheckerboardSpinColorDiagonal.cc \
   Modules/MNoise/FullVolumeSpinColorDiagonal.cc \
-  Modules/MNoise/SparseGridSpinColorDiagonal.cc \
   Modules/MNoise/SparseSpinColorDiagonal.cc \
   Modules/MNoise/TimeDilutedSpinColorDiagonal.cc \
   Modules/MNPR/Amputate.cc \
@@ -131,8 +131,8 @@ modules_hpp =\
   Modules/MIO/LoadEigenPack.hpp \
   Modules/MIO/LoadNersc.hpp \
   Modules/MIO/LoadPerambulator.hpp \
+  Modules/MNoise/CheckerboardSpinColorDiagonal.hpp \
   Modules/MNoise/FullVolumeSpinColorDiagonal.hpp \
-  Modules/MNoise/SparseGridSpinColorDiagonal.hpp \
   Modules/MNoise/SparseSpinColorDiagonal.hpp \
   Modules/MNoise/TimeDilutedSpinColorDiagonal.hpp \
   Modules/MNPR/Amputate.hpp \

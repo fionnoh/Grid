@@ -76,7 +76,6 @@ void TSparseSpinColorDiagonal<FImpl>::setup(void)
     envCreateDerived(DilutedNoise<FImpl>, 
                      SparseSpinColorDiagonalNoise<FImpl>,
                      getName(), 1, envGetGrid(FermionField), par().nsrc, par().nsparse);
-    
 }
 
 // execution ///////////////////////////////////////////////////////////////////
@@ -84,7 +83,7 @@ template <typename FImpl>
 void TSparseSpinColorDiagonal<FImpl>::execute(void)
 {
     auto &noise = envGet(DilutedNoise<FImpl>, getName());
-    LOG(Message) << "Generating sparse, spin-color diagonal noise with nSparse = "
+    LOG(Message) << "Generating sparsened, spin-color diagonal noise with nSparse = "
                     << par().nsparse << std::endl;
     noise.generateNoise(rng4d());
 }
